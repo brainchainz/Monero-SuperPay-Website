@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monero SuperPay - Self-Hosted Monero Point of Sale</title>
+    <meta name="description"
+        content="Accept Monero payments at any business. Self-hosted, privacy-first point of sale system with watch-only wallet technology.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #FF6600;
+            --orange-dim: rgba(255, 102, 0, 0.15);
+            --bg: #0a0a0a;
+            --bg2: #111;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --dark-muted: #6b7280;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* ═══════════ HORIZONTAL SCROLL CONTAINER ═══════════ */
+
+        .scroll-wrapper {
+            width: 100vw;
+            height: 100vh;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            scroll-snap-type: x mandatory;
+            display: flex;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .scroll-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scroll-wrapper {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .panel {
+            flex: 0 0 100vw;
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 60px 80px;
+        }
+
+        @media (max-width: 768px) {
+            .panel {
+                padding: 40px 28px;
+            }
+        }
+
+        /* ═══════════ PROGRESS ARROW (fixed bottom bar) ═══════════ */
+
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 56px;
+            z-index: 1000;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .progress-track {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 56px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 102, 0, 0.1);
+        }
+
+        .progress-arrow-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+        }
+
+        /* The arrow shaft */
+        .arrow-shaft {
+            height: 6px;
+            background: linear-gradient(90deg, var(--orange), #ff8833);
+            border-radius: 3px 0 0 3px;
+            transition: width 0.15s ease-out;
+            position: relative;
+            min-width: 4px;
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.4), 0 0 60px rgba(255, 102, 0, 0.15);
+        }
+
+        /* The arrowhead */
+        .arrow-head {
+            width: 0;
+            height: 0;
+            border-top: 14px solid transparent;
+            border-bottom: 14px solid transparent;
+            border-left: 22px solid #ff8833;
+            filter: drop-shadow(0 0 8px rgba(255, 102, 0, 0.6));
+            transition: transform 0.15s ease-out;
+            flex-shrink: 0;
+        }
+
+        /* Glow trail behind the arrow */
+        .arrow-glow {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 30px;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, transparent, rgba(255, 102, 0, 0.08));
+            border-radius: 15px;
+            pointer-events: none;
+            transition: width 0.15s ease-out;
+        }
+
+        /* Section dots */
+        .progress-dots {
+            position: absolute;
+            top: 50%;
+            left: 24px;
+            right: 24px;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            pointer-events: auto;
+        }
+
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-dot.passed {
+            background: var(--orange);
+            border-color: var(--orange);
+            box-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
+        }
+
+        .progress-dot-label {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--muted);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .progress-dot:hover .progress-dot-label {
+            opacity: 1;
+        }
+
+        /* ═══════════ SCROLL HINT ═══════════ */
+
+        .scroll-hint {
+            position: fixed;
+            bottom: 72px;
+            right: 32px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+            animation: hint-pulse 2.5s ease-in-out infinite;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+        }
+
+        .scroll-hint svg {
+            animation: hint-bounce 2.5s ease-in-out infinite;
+        }
+
+        @keyframes hint-pulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes hint-bounce {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(6px);
+            }
+        }
+
+        /* ═══════════ PANEL 1: HERO ═══════════ */
+
+        .panel-hero {
+            background: radial-gradient(ellipse at 30% 40%, rgba(255, 102, 0, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 70%, rgba(255, 102, 0, 0.04) 0%, transparent 50%),
+                var(--bg);
+            flex-direction: column;
+            gap: 36px;
+            text-align: center;
+        }
+
+        .hero-logo {
+            width: min(420px, 70vw);
+            filter: drop-shadow(0 0 40px rgba(255, 102, 0, 0.2));
+            animation: logo-in 1s ease-out both;
+        }
+
+        @keyframes logo-in {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .hero-tagline {
+            font-size: clamp(18px, 3vw, 26px);
+            color: var(--muted);
+            max-width: 560px;
+            line-height: 1.5;
+            animation: fade-up 0.8s 0.3s ease-out both;
+        }
+
+        .hero-cta-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fade-up 0.8s 0.5s ease-out both;
+        }
+
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: var(--orange);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #e55a00;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(255, 102, 0, 0.35);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--orange);
+            border: 2px solid var(--orange);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 102, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* ═══════════ PANEL 2: FEATURES ═══════════ */
+
+        .panel-features {
+            background: radial-gradient(ellipse at 60% 30%, rgba(255, 102, 0, 0.06) 0%, transparent 50%), var(--bg);
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        .panel-title {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .panel-subtitle {
+            font-size: clamp(15px, 2vw, 18px);
+            color: var(--muted);
+            margin-top: 0;
+        }
+
+        /* Group title + subtitle tightly within flex/gap layouts */
+        .panel-header {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .panel-header .panel-subtitle {
+            margin-top: 0;
+        }
+
+        .features-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            .features-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .features-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+
+        .feat-card {
+            background: linear-gradient(135deg, rgba(255, 102, 0, 0.06), rgba(255, 102, 0, 0.02));
+            border: 1px solid rgba(255, 102, 0, 0.15);
+            border-radius: 14px;
+            padding: 28px;
+            transition: all 0.3s ease;
+        }
+
+        .feat-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255, 102, 0, 0.4);
+            box-shadow: 0 16px 40px rgba(255, 102, 0, 0.08);
+        }
+
+        .feat-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .feat-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .feat-card p {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        /* ═══════════ PANEL 3: HOW IT WORKS ═══════════ */
+
+        .panel-how {
+            background: radial-gradient(ellipse at 40% 60%, rgba(255, 102, 0, 0.06) 0%, transparent 50%), var(--bg);
+            flex-direction: column;
+            gap: 56px;
+        }
+
+        .steps-row {
+            display: flex;
+            gap: 48px;
+            align-items: flex-start;
+            max-width: 960px;
+        }
+
+        @media (max-width: 768px) {
+            .steps-row {
+                flex-direction: column;
+                gap: 32px;
+            }
+        }
+
+        .step-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .step-num {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, var(--orange), #ff8833);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 auto 20px;
+            box-shadow: 0 12px 36px rgba(255, 102, 0, 0.35);
+        }
+
+        .step-item h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .step-item p {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.6;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+
+        /* Step connectors */
+        .step-connector {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--orange), rgba(255, 102, 0, 0.2));
+            margin-top: 36px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .step-connector {
+                width: 2px;
+                height: 32px;
+                margin: 0 auto;
+                background: linear-gradient(180deg, var(--orange), rgba(255, 102, 0, 0.2));
+            }
+        }
+
+        /* ═══════════ PANELS 4-9: SCREENSHOT SLIDES ═══════════ */
+
+        .panel-screenshot {
+            background: var(--bg);
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .screenshot-frame {
+            max-width: 85vw;
+            max-height: 72vh;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 102, 0, 0.25);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 102, 0, 0.08);
+            transition: all 0.4s ease;
+        }
+
+        .screenshot-frame:hover {
+            border-color: rgba(255, 102, 0, 0.5);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 80px rgba(255, 102, 0, 0.15);
+        }
+
+        .screenshot-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .screenshot-info {
+            text-align: center;
+        }
+
+        .screenshot-info h3 {
+            font-size: clamp(22px, 3vw, 32px);
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .screenshot-info p {
+            font-size: clamp(14px, 1.8vw, 17px);
+            color: var(--muted);
+        }
+
+        /* ═══════════ PANEL 10: DEPLOY ═══════════ */
+
+        .panel-deploy {
+            background: radial-gradient(ellipse at 50% 40%, rgba(255, 102, 0, 0.06) 0%, transparent 50%), var(--bg);
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        .deploy-row {
+            display: flex;
+            gap: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .deploy-row {
+                flex-direction: column;
+                gap: 24px;
+            }
+        }
+
+        .deploy-card {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(255, 102, 0, 0.06), rgba(255, 102, 0, 0.02));
+            border: 2px solid rgba(255, 102, 0, 0.15);
+            border-radius: 18px;
+            padding: 36px;
+            transition: all 0.3s ease;
+        }
+
+        .deploy-card:hover {
+            border-color: rgba(255, 102, 0, 0.4);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 48px rgba(255, 102, 0, 0.12);
+        }
+
+        .deploy-badge {
+            display: inline-block;
+            background: rgba(255, 102, 0, 0.2);
+            color: var(--orange);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .deploy-card h3 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .deploy-card p {
+            color: var(--muted);
+            font-size: 15px;
+            margin-bottom: 24px;
+            line-height: 1.55;
+        }
+
+        .check-list {
+            list-style: none;
+            margin-bottom: 28px;
+        }
+
+        .check-list li {
+            color: var(--muted);
+            font-size: 14px;
+            padding: 6px 0 6px 24px;
+            position: relative;
+        }
+
+        .check-list li::before {
+            content: '\2713';
+            position: absolute;
+            left: 0;
+            color: var(--orange);
+            font-weight: 700;
+        }
+
+        .deploy-card .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+
+        /* ═══════════ PANEL: DONATE ═══════════ */
+
+        .panel-donate {
+            background: radial-gradient(ellipse at 40% 40%, rgba(255, 102, 0, 0.08) 0%, transparent 50%), var(--bg);
+            flex-direction: column;
+            gap: 32px;
+            text-align: center;
+        }
+
+        .donate-box {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 18px;
+            padding: 36px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 460px;
+        }
+
+        .donate-qr {
+            width: 180px;
+            height: 180px;
+            border-radius: 10px;
+        }
+
+        .donate-address {
+            font-size: 10px;
+            color: #d1d5db;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            word-break: break-all;
+            line-height: 1.6;
+            max-width: 380px;
+            font-family: monospace;
+        }
+
+        .donate-label {
+            font-size: 10px;
+            color: var(--dark-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .kuno-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            background: var(--orange);
+            color: #fff;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.25s ease;
+        }
+
+        .kuno-btn:hover {
+            background: #e55a00;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(255, 102, 0, 0.3);
+        }
+
+        /* ═══════════ PANEL ENTRANCE ANIMATIONS ═══════════ */
+
+        .panel-content {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .panel.active .panel-content {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ═══════════ NAV PILLS (top-right) ═══════════ */
+
+        .nav-pills {
+            position: fixed;
+            top: 20px;
+            right: 24px;
+            z-index: 1001;
+            display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            padding: 6px 10px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-pill {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-decoration: none;
+            border-radius: 20px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: inherit;
+        }
+
+        .nav-pill:hover,
+        .nav-pill.active {
+            color: #fff;
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .nav-pill.donate-pill {
+            color: var(--orange);
+        }
+
+        @media (max-width: 768px) {
+            .nav-pills {
+                display: none;
+            }
+        }
+
+        /* Logo in top-left */
+        .fixed-logo {
+            position: fixed;
+            top: 16px;
+            left: 24px;
+            z-index: 1001;
+            height: 32px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .fixed-logo.show {
+            opacity: 1;
+        }
+
+        /* Keyboard hint */
+        .key-hints {
+            position: fixed;
+            bottom: 68px;
+            left: 24px;
+            z-index: 999;
+            display: flex;
+            gap: 6px;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+        }
+
+        .key-hints:hover {
+            opacity: 0.8;
+        }
+
+        .key-hint {
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        @media (max-width: 768px) {
+            .key-hints {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Fixed mini-logo (shows after hero) -->
+    <img src="logo.png" alt="SuperPay" class="fixed-logo" id="fixedLogo">
+
+    <!-- Navigation pills -->
+    <nav class="nav-pills" id="navPills">
+        <button class="nav-pill active" data-panel="0">Home</button>
+        <button class="nav-pill" data-panel="1">Features</button>
+        <button class="nav-pill" data-panel="2">How</button>
+        <button class="nav-pill" data-panel="3">Preview</button>
+        <button class="nav-pill" data-panel="10">Deploy</button>
+        <button class="nav-pill donate-pill" data-panel="11">Donate</button>
+    </nav>
+
+    <!-- Scroll hint -->
+    <div class="scroll-hint" id="scrollHint">
+        Scroll
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </div>
+
+    <!-- Keyboard hints -->
+    <div class="key-hints">
+        <div class="key-hint">&larr;</div>
+        <div class="key-hint">&rarr;</div>
+    </div>
+
+    <!-- ═══════════ HORIZONTAL PANELS ═══════════ -->
+    <div class="scroll-wrapper" id="scroller">
+
+        <!-- PANEL 1: HERO -->
+        <section class="panel panel-hero" data-label="Home">
+            <img src="logo.png" alt="Monero SuperPay" class="hero-logo">
+            <p class="hero-tagline">
+                Self-hosted, privacy-first point of sale.<br>
+                Accept Monero payments at any business.
+            </p>
+            <div class="hero-cta-row">
+                <a href="https://github.com/brainchainz/Monero-Superbrain/releases" class="btn btn-primary">Get
+                    Started</a>
+                <a href="https://github.com/brainchainz/Monero-Superbrain" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.547 2.914 1.182.092-.92.35-1.548.636-1.904-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.138 18.166 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                    GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- PANEL 2: FEATURES -->
+        <section class="panel panel-features" data-label="Features">
+            <div class="panel-content">
+                <div class="panel-header">
+                    <h2 class="panel-title">Powerful Features</h2>
+                    <p class="panel-subtitle">A full point-of-sale system designed for merchants.</p>
+                </div>
+                <div class="features-row">
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <path d="M20 2L28.66 6.89V15.11L20 20L11.34 15.11V6.89L20 2Z" stroke="#FF6600"
+                                    stroke-width="2.5" fill="none" />
+                                <path d="M20 20V38" stroke="#FF6600" stroke-width="2.5" />
+                            </svg>
+                        </span>
+                        <h3>Accept Monero Payments</h3>
+                        <p>Start accepting XMR instantly. Simple, fast, private transactions. No signup, no login, no
+                            KYC, no fees.</p>
+                    </div>
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <rect x="8" y="10" width="24" height="20" rx="2" stroke="#FF6600" stroke-width="2.5"
+                                    fill="none" />
+                                <path d="M8 15H32" stroke="#FF6600" stroke-width="2.5" />
+                            </svg>
+                        </span>
+                        <h3>Watch-Only Wallet</h3>
+                        <p>No private spend keys stored. Monitor payments securely.</p>
+                    </div>
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <circle cx="20" cy="20" r="12" stroke="#FF6600" stroke-width="2.5" fill="none" />
+                                <path d="M20 14V20L24 24" stroke="#FF6600" stroke-width="2.5" stroke-linecap="round" />
+                            </svg>
+                        </span>
+                        <h3>Real-Time Payments</h3>
+                        <p>WebSocket-driven instant confirmations when payments arrive.</p>
+                    </div>
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <rect x="8" y="6" width="10" height="28" rx="1.5" stroke="#FF6600" stroke-width="2.5"
+                                    fill="none" />
+                                <rect x="22" y="10" width="10" height="24" rx="1.5" stroke="#FF6600" stroke-width="2.5"
+                                    fill="none" />
+                            </svg>
+                        </span>
+                        <h3>Multi-Device Pairing</h3>
+                        <p>Pair tablets and phones as PoS terminals via QR. LAN, Tor, or Tailscale.</p>
+                    </div>
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <rect x="6" y="8" width="12" height="24" rx="1.5" stroke="#FF6600" stroke-width="2.5"
+                                    fill="none" />
+                                <rect x="22" y="8" width="12" height="24" rx="1.5" stroke="#FF6600" stroke-width="2.5"
+                                    fill="none" />
+                            </svg>
+                        </span>
+                        <h3>Multi-Store</h3>
+                        <p>Manage multiple locations from a single dashboard.</p>
+                    </div>
+                    <div class="feat-card">
+                        <span class="feat-icon">
+                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                                <path
+                                    d="M10 14H30M10 20H30M10 26H30M8 10H32C33.1 10 34 10.9 34 12V28C34 29.1 33.1 30 32 30H8C6.9 30 6 29.1 6 28V12C6 10.9 6.9 10 8 10Z"
+                                    stroke="#FF6600" stroke-width="2.5" fill="none" stroke-linecap="round" />
+                            </svg>
+                        </span>
+                        <h3>Advanced Analytics</h3>
+                        <p>Track sales, revenue, and exports. CSV reports for analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 3: HOW IT WORKS -->
+        <section class="panel panel-how" data-label="How It Works">
+            <div class="panel-content">
+                <div class="panel-header">
+                    <h2 class="panel-title">How It Works</h2>
+                    <p class="panel-subtitle">Three steps to accepting Monero</p>
+                </div>
+                <div class="steps-row">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <h3>Install</h3>
+                        <p>Choose Umbrel server app or Mac desktop app. One-click deployment.</p>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <h3>Configure</h3>
+                        <p>Set up products, categories, images. Add Monero view wallet. Pair devices via QR code.</p>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <h3>Accept</h3>
+                        <p>Start accepting Monero instantly. Monitor orders, print receipts.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 4: DASHBOARD -->
+        <section class="panel panel-screenshot" data-label="Dashboard">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Dashboard</h3>
+                    <p>Overview, stats, and connected devices</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-dashboard.png" alt="Dashboard" loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 5: PRODUCTS -->
+        <section class="panel panel-screenshot" data-label="Products">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Products</h3>
+                    <p>Categories, images, and pricing</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-products.png" alt="Products" loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 6: DEVICES -->
+        <section class="panel panel-screenshot" data-label="Devices">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Devices</h3>
+                    <p>Pair and manage PoS terminals</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-devices.png" alt="Devices" loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 7: POINT OF SALE -->
+        <section class="panel panel-screenshot" data-label="Point of Sale">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Point of Sale</h3>
+                    <p>Browse products, build orders, charge</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-pos.png" alt="Point of Sale" loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 8: ORDERS -->
+        <section class="panel panel-screenshot" data-label="Orders">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Orders</h3>
+                    <p>Track and manage all transactions</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-orders.png" alt="Orders" loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 9: CHECKOUT -->
+        <section class="panel panel-screenshot" data-label="Checkout">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Waiting for Payment</h3>
+                    <p>QR code checkout with live countdown</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-checkout.png" alt="Waiting for Payment"
+                        loading="lazy"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 10: PAYMENT CONFIRMED -->
+        <section class="panel panel-screenshot" data-label="Payment">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <div class="screenshot-info">
+                    <h3>Payment Received</h3>
+                    <p>Instant confirmation!</p>
+                </div>
+                <div class="screenshot-frame"><img src="screenshot-payment.png" alt="Payment Received" loading="lazy">
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 11: DEPLOY -->
+        <section class="panel panel-deploy" data-label="Deploy">
+            <div class="panel-content">
+                <div class="panel-header">
+                    <h2 class="panel-title">Two Ways to Deploy</h2>
+                    <p class="panel-subtitle">Choose what works best for your business</p>
+                </div>
+                <div class="deploy-row">
+                    <div class="deploy-card">
+                        <div class="deploy-badge">Desktop Application</div>
+                        <h3>Mac Desktop</h3>
+                        <p>For businesses ready to accept Monero with minimal setup.</p>
+                        <ul class="check-list">
+                            <li>Run natively on macOS</li>
+                            <li>Simple installation</li>
+                            <li>Pair multiple terminals</li>
+                            <li>LAN + Tailscale support</li>
+                        </ul>
+                        <a href="https://github.com/brainchainz/Monero-Superbrain/releases"
+                            class="btn btn-primary">Download for Mac</a>
+                    </div>
+                    <div class="deploy-card">
+                        <div class="deploy-badge">Self-Hosted Server</div>
+                        <h3>Umbrel App</h3>
+                        <p>For home server enthusiasts who want complete control.</p>
+                        <ul class="check-list">
+                            <li>Run on your Umbrel home server</li>
+                            <li>Full infrastructure control</li>
+                            <li>24/7 availability</li>
+                            <li>LAN + Tor support</li>
+                        </ul>
+                        <a href="https://umbrel.com" class="btn btn-primary">Install on Umbrel</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL: DONATE -->
+        <section class="panel panel-donate" data-label="Donate">
+            <div class="panel-content" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+                <h2 class="panel-title">Support Development</h2>
+                <p style="color:var(--muted);max-width:480px;font-size:15px;line-height:1.6;">Monero SuperPay is free
+                    and open source. Consider supporting ongoing development.</p>
+                <div class="donate-box">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=monero%3A489mHXbSehCF5oraCQvmRYSe9mkxyqZ6XJBS8A4af6qzbKBx3b26bLSRUVso9R6PTSgEX7RggVPc5hxcZnAaRKCT7iekvDX&bgcolor=141414&color=FF6600"
+                        alt="Donation QR" class="donate-qr">
+                    <span class="donate-label">Monero Address</span>
+                    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+                        <div class="donate-address" id="donateAddr" style="flex:1;">
+                            489mHXbSehCF5oraCQvmRYSe9mkxyqZ6XJBS8A4af6qzbKBx3b26bLSRUVso9R6PTSgEX7RggVPc5hxcZnAaRKCT7iekvDX
+                        </div>
+                        <button
+                            onclick="navigator.clipboard.writeText(document.getElementById('donateAddr').textContent.trim());this.innerHTML='<svg width=&quot;18&quot; height=&quot;18&quot; fill=&quot;none&quot; stroke=&quot;%2322c55e&quot; viewBox=&quot;0 0 24 24&quot;><path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M5 13l4 4L19 7&quot;/></svg>';setTimeout(()=>this.innerHTML='<svg width=&quot;18&quot; height=&quot;18&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; viewBox=&quot;0 0 24 24&quot;><rect x=&quot;9&quot; y=&quot;9&quot; width=&quot;13&quot; height=&quot;13&quot; rx=&quot;2&quot; stroke-width=&quot;2&quot;/><path d=&quot;M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1&quot; stroke-width=&quot;2&quot;/></svg>',1500)"
+                            style="background:none;border:1px solid #333;border-radius:8px;padding:8px;cursor:pointer;color:var(--muted);transition:all 0.2s;flex-shrink:0;"
+                            onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange)'"
+                            onmouseout="this.style.borderColor='#333';this.style.color='var(--muted)'"><svg width="18"
+                                height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2" />
+                            </svg></button>
+                    </div>
+                    <a href="https://kuno.anne.media/fundraiser/ufmp/" target="_blank" rel="noopener noreferrer"
+                        class="kuno-btn">
+                        View Fundraiser on Kuno
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+                    <a href="https://x.com/MgkMshrmBrkfst" target="_blank" rel="noopener noreferrer"
+                        style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:14px;transition:all 0.25s ease;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        Follow SirJamzAlot on X
+                    </a>
+                    <a href="https://github.com/brainchainz/Monero-Superbrain/tree/main/brainchainz-monero-superpay"
+                        target="_blank" rel="noopener noreferrer"
+                        style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:14px;transition:all 0.25s ease;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                            <path
+                                d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.547 2.914 1.182.092-.92.35-1.548.636-1.904-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.138 18.166 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
+                        </svg>
+                        View on GitHub
+                    </a>
+                </div>
+                <p style="font-size:12px;color:var(--dark-muted);margin-top:8px;">Built with love for the Monero
+                    community &middot; &copy; 2026 Monero SuperPay</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ═══════════ PROGRESS ARROW BAR ═══════════ -->
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-track"></div>
+        <div class="progress-arrow-container" id="arrowContainer">
+            <div class="arrow-glow" id="arrowGlow"></div>
+            <div class="arrow-shaft" id="arrowShaft"></div>
+            <div class="arrow-head" id="arrowHead"></div>
+        </div>
+        <div class="progress-dots" id="progressDots"></div>
+    </div>
+
+    <script>
+        (function () {
+            const scroller = document.getElementById('scroller');
+            const panels = document.querySelectorAll('.panel');
+            const shaft = document.getElementById('arrowShaft');
+            const head = document.getElementById('arrowHead');
+            const glow = document.getElementById('arrowGlow');
+            const dotsWrap = document.getElementById('progressDots');
+            const navPills = document.querySelectorAll('.nav-pill');
+            const fixedLogo = document.getElementById('fixedLogo');
+            const scrollHint = document.getElementById('scrollHint');
+            const totalPanels = panels.length;
+
+            // Build dots
+            const labels = [];
+            panels.forEach((p, i) => {
+                labels.push(p.dataset.label || '');
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot';
+                dot.dataset.index = i;
+                const lbl = document.createElement('span');
+                lbl.className = 'progress-dot-label';
+                lbl.textContent = labels[i];
+                dot.appendChild(lbl);
+                dot.addEventListener('click', () => scrollToPanel(i));
+                dotsWrap.appendChild(dot);
+            });
+
+            const dots = document.querySelectorAll('.progress-dot');
+
+            function scrollToPanel(index) {
+                scroller.scrollTo({ left: index * window.innerWidth, behavior: 'smooth' });
+            }
+
+            // Nav pill clicks
+            navPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    scrollToPanel(parseInt(pill.dataset.panel));
+                });
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                const idx = Math.round(scroller.scrollLeft / window.innerWidth);
+                if (e.key === 'ArrowRight' && idx < totalPanels - 1) {
+                    scrollToPanel(idx + 1);
+                } else if (e.key === 'ArrowLeft' && idx > 0) {
+                    scrollToPanel(idx - 1);
+                }
+            });
+
+            // Mouse wheel → horizontal scroll
+            scroller.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    e.preventDefault();
+                    scroller.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+
+            // Update on scroll
+            function update() {
+                const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+                const progress = maxScroll > 0 ? scroller.scrollLeft / maxScroll : 0;
+                const containerWidth = document.getElementById('arrowContainer').clientWidth;
+                const headWidth = 22;
+                const maxShaft = containerWidth - headWidth - 48; // padding
+
+                // Arrow shaft width
+                const shaftWidth = Math.max(4, progress * maxShaft);
+                shaft.style.width = shaftWidth + 'px';
+                glow.style.width = (shaftWidth + 20) + 'px';
+
+                // Current panel index
+                const currentPanel = Math.round(scroller.scrollLeft / window.innerWidth);
+
+                // Update dots
+                dots.forEach((d, i) => {
+                    const panelProgress = scroller.scrollLeft / window.innerWidth;
+                    d.classList.toggle('passed', i <= panelProgress + 0.3);
+                });
+
+                // Update nav pills
+                navPills.forEach((pill, i) => {
+                    pill.classList.toggle('active', i === currentPanel);
+                });
+
+                // Panel entrance animation
+                panels.forEach((p, i) => {
+                    const rect = p.getBoundingClientRect();
+                    const visible = rect.left < window.innerWidth * 0.7 && rect.right > window.innerWidth * 0.3;
+                    p.classList.toggle('active', visible);
+                });
+
+                // Show mini logo after hero
+                fixedLogo.classList.toggle('show', currentPanel > 0);
+
+                // Hide scroll hint after first scroll
+                if (scroller.scrollLeft > 100) {
+                    scrollHint.style.opacity = '0';
+                } else {
+                    scrollHint.style.opacity = '';
+                }
+
+                // Arrowhead pulse on completion
+                if (progress > 0.98) {
+                    head.style.filter = 'drop-shadow(0 0 14px rgba(255, 102, 0, 0.9))';
+                    head.style.borderLeftColor = '#FF6600';
+                } else {
+                    head.style.filter = 'drop-shadow(0 0 8px rgba(255, 102, 0, 0.6))';
+                    head.style.borderLeftColor = '#ff8833';
+                }
+            }
+
+            scroller.addEventListener('scroll', update, { passive: true });
+            window.addEventListener('resize', update);
+
+            // Init
+            panels[0].classList.add('active');
+            update();
+
+            // Touch swipe support (for mobile)
+            let touchStartX = 0;
+            scroller.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+        })();
+    </script>
+</body>
+
+</html>
