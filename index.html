@@ -255,10 +255,29 @@
             text-align: center;
         }
 
+        .hero-app-icon {
+            width: min(140px, 28vw);
+            border-radius: 28%;
+            filter: drop-shadow(0 0 50px rgba(255, 102, 0, 0.35));
+            animation: icon-in 0.8s ease-out both;
+            margin-bottom: -20px;
+        }
+
+        @keyframes icon-in {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
         .hero-logo {
             width: min(420px, 70vw);
             filter: drop-shadow(0 0 40px rgba(255, 102, 0, 0.2));
-            animation: logo-in 1s ease-out both;
+            animation: logo-in 1s 0.2s ease-out both;
         }
 
         @keyframes logo-in {
@@ -851,13 +870,14 @@
 
         <!-- PANEL 1: HERO -->
         <section class="panel panel-hero" data-label="Home">
+            <img src="app-icon.png" alt="Monero SuperPay Icon" class="hero-app-icon">
             <img src="logo.png" alt="Monero SuperPay" class="hero-logo">
             <p class="hero-tagline">
                 Self-hosted, privacy-first point of sale.<br>
                 Accept Monero payments at any business.
             </p>
             <div class="hero-cta-row">
-                <a href="https://github.com/brainchainz/Monero-Superbrain/releases" class="btn btn-primary">Get
+                <a href="javascript:void(0)" onclick="scrollToPanel(10)" class="btn btn-primary">Get
                     Started</a>
                 <a href="https://github.com/brainchainz/Monero-Superbrain" class="btn btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
@@ -1075,8 +1095,8 @@
                             <li>Pair multiple terminals</li>
                             <li>LAN + Tailscale support</li>
                         </ul>
-                        <a href="https://github.com/brainchainz/Monero-Superbrain/releases"
-                            class="btn btn-primary">Download for Mac</a>
+                        <a href="https://github.com/brainchainz/Monero-SuperPay/releases/latest/download/MoneroSuperPay-1.0.0.dmg"
+                            class="btn btn-primary" download>Download for Mac</a>
                     </div>
                     <div class="deploy-card">
                         <div class="deploy-badge">Self-Hosted Server</div>
@@ -1088,7 +1108,7 @@
                             <li>24/7 availability</li>
                             <li>LAN + Tor support</li>
                         </ul>
-                        <a href="https://umbrel.com" class="btn btn-primary">Install on Umbrel</a>
+                        <a href="https://github.com/brainchainz/Monero-Superbrain" target="_blank" class="btn btn-primary">Install on Umbrel</a>
                     </div>
                 </div>
             </div>
@@ -1198,9 +1218,10 @@
 
             const dots = document.querySelectorAll('.progress-dot');
 
-            function scrollToPanel(index) {
+            window.scrollToPanel = function(index) {
                 scroller.scrollTo({ left: index * window.innerWidth, behavior: 'smooth' });
             }
+            const scrollToPanel = window.scrollToPanel;
 
             // Nav pill clicks
             navPills.forEach(pill => {
