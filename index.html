@@ -44,6 +44,7 @@
         .scroll-wrapper {
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             overflow-x: auto;
             overflow-y: hidden;
             scroll-behavior: smooth;
@@ -65,6 +66,7 @@
             flex: 0 0 100vw;
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             scroll-snap-align: start;
             display: flex;
             align-items: center;
@@ -833,6 +835,230 @@
                 display: none;
             }
         }
+
+        /* ═══════════ MOBILE RESPONSIVE FIXES ═══════════ */
+
+        @media (max-width: 768px) {
+            /* Allow internal vertical scroll when a panel's content is taller than the viewport.
+               Panels need room for the 56px progress bar at bottom.
+               `safe center` keeps short content centered but prevents cutoff when it overflows. */
+            .panel {
+                padding: 32px 20px 80px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                justify-content: safe center;
+                align-items: safe center;
+            }
+
+            .panel::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* HERO — tighter stacking, no negative margin that hides the icon on short screens */
+            .panel-hero {
+                gap: 20px;
+            }
+
+            .hero-app-icon {
+                width: min(110px, 26vw);
+                margin-bottom: 0;
+            }
+
+            .hero-logo {
+                width: min(320px, 78vw);
+            }
+
+            .hero-tagline {
+                font-size: 16px;
+                line-height: 1.5;
+                padding: 0 8px;
+            }
+
+            .hero-cta-row {
+                gap: 12px;
+            }
+
+            .btn {
+                padding: 12px 22px;
+                font-size: 14px;
+            }
+
+            /* FEATURES / HOW / DEPLOY — tighten panel-level gaps */
+            .panel-features,
+            .panel-how,
+            .panel-deploy,
+            .panel-donate {
+                gap: 28px;
+            }
+
+            .panel-title {
+                font-size: 30px;
+            }
+
+            .panel-subtitle {
+                font-size: 14px;
+            }
+
+            .feat-card {
+                padding: 20px;
+            }
+
+            .feat-card h3 {
+                font-size: 16px;
+            }
+
+            .step-item h3 {
+                font-size: 19px;
+            }
+
+            /* SCREENSHOT PANELS — frame must account for progress bar (56px) + header text */
+            .panel-screenshot {
+                gap: 16px;
+            }
+
+            .screenshot-frame {
+                max-width: 92vw;
+                max-height: calc(100dvh - 240px);
+            }
+
+            .screenshot-info h3 {
+                font-size: 20px;
+            }
+
+            .screenshot-info p {
+                font-size: 13px;
+                padding: 0 12px;
+            }
+
+            /* DEPLOY CARDS — tighter padding, uniform width when stacked */
+            .deploy-card {
+                padding: 24px;
+            }
+
+            .deploy-card h3 {
+                font-size: 22px;
+            }
+
+            .deploy-card p {
+                font-size: 14px;
+                margin-bottom: 18px;
+            }
+
+            .check-list li {
+                font-size: 13px;
+            }
+
+            /* DONATE — smaller QR, address wraps cleanly */
+            .donate-box {
+                padding: 24px 18px;
+                max-width: 92vw;
+                gap: 16px;
+            }
+
+            .donate-qr {
+                width: 150px;
+                height: 150px;
+            }
+
+            .donate-address {
+                font-size: 9px;
+                padding: 10px;
+                max-width: 100%;
+            }
+
+            /* Fixed mini-logo — smaller on mobile so it doesn't crowd top-right donate pill area */
+            .fixed-logo {
+                height: 24px;
+                left: 16px;
+                top: 12px;
+            }
+
+            /* Progress dots — hide labels on mobile (no hover on touch anyway) */
+            .progress-dot-label {
+                display: none;
+            }
+
+            .progress-dots {
+                left: 14px;
+                right: 14px;
+            }
+
+            /* Hide the desktop "Scroll →" hint on mobile; swipe is the obvious gesture */
+            .scroll-hint {
+                display: none;
+            }
+        }
+
+        /* Extra-small phones (iPhone SE, older Androids) */
+        @media (max-width: 400px) {
+            .panel {
+                padding: 24px 16px 76px;
+            }
+
+            .panel-title {
+                font-size: 26px;
+            }
+
+            .hero-app-icon {
+                width: 90px;
+            }
+
+            .hero-logo {
+                width: 260px;
+            }
+
+            .hero-tagline {
+                font-size: 15px;
+            }
+
+            .hero-cta-row {
+                flex-direction: column;
+                width: 100%;
+                padding: 0 24px;
+            }
+
+            .hero-cta-row .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .donate-qr {
+                width: 130px;
+                height: 130px;
+            }
+
+            .donate-address {
+                font-size: 8.5px;
+            }
+
+            .screenshot-frame {
+                max-height: calc(100dvh - 260px);
+            }
+        }
+
+        /* Short landscape mobile (e.g. phone rotated) — avoid vertical cramping */
+        @media (max-height: 500px) and (max-width: 900px) {
+            .panel-hero {
+                gap: 14px;
+            }
+
+            .hero-app-icon {
+                width: 70px;
+                margin-bottom: 0;
+            }
+
+            .hero-logo {
+                width: 220px;
+            }
+
+            .hero-tagline {
+                font-size: 14px;
+            }
+
+            .screenshot-frame {
+                max-height: calc(100dvh - 180px);
+            }
+        }
     </style>
 </head>
 
@@ -1095,7 +1321,7 @@
                             <li>Pair multiple terminals</li>
                             <li>LAN + Tailscale support</li>
                         </ul>
-                        <a href="https://github.com/brainchainz/Monero-SuperPay/releases/latest/download/MoneroSuperPay-1.0.0.dmg"
+                        <a href="https://github.com/brainchainz/Monero-SuperPay/releases/latest/download/MoneroSuperPay-1.2.1.dmg"
                             class="btn btn-primary" download>Download for Mac</a>
                     </div>
                     <div class="deploy-card">
